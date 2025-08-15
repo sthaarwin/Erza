@@ -198,6 +198,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
     sarcastic: "😏",
     professional: "💼",
     funny: "😄",
+    tsundere: "😤",
   };
 
   const personalityOptions = [
@@ -205,6 +206,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
     { value: "sarcastic", label: "Sarcastic", icon: "😏" },
     { value: "professional", label: "Professional", icon: "💼" },
     { value: "funny", label: "Funny", icon: "😄" },
+    { value: "tsundere", label: "Tsundere", icon: "😤" },
   ];
 
   if (isLoading) {
@@ -216,12 +218,12 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
   }
 
   return (
-    <div className="flex flex-col h-screen max-w-4xl mx-auto">
+    <div className="flex flex-col h-full w-full max-w-4xl mx-auto bg-ctp-base">
       {/* Header */}
-      <header className="bg-ctp-mantle border-b border-ctp-surface0 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-ctp-mantle border-b border-ctp-surface0 px-4 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-ctp-mauve to-ctp-blue rounded-full flex items-center justify-center">
-            <Bot className="text-ctp-text text-lg" />
+            <Bot className="text-white text-lg" />
           </div>
           <div>
             <h1 className="text-xl font-semibold text-ctp-text">Erza</h1>
@@ -256,8 +258,8 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
       </header>
 
       {/* Messages Area */}
-      <main className="flex-1 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-y-auto chat-scroll px-6 py-4 space-y-4">
+      <main className="flex-1 min-h-0 flex flex-col bg-ctp-base">
+        <div className="flex-1 overflow-y-auto chat-scroll px-4 py-4 space-y-4">
           {messages.length === 0 && (
             <div className="message-bubble flex items-start space-x-3 animate-fade-in">
               <div className="w-8 h-8 bg-gradient-to-br from-ctp-mauve to-ctp-blue rounded-full flex items-center justify-center mt-1 flex-shrink-0">
@@ -270,7 +272,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
                 </div>
                 <div className="bg-ctp-surface0 rounded-2xl rounded-tl-md px-4 py-3 max-w-lg">
                   <p className="text-ctp-text">
-                    Hi there! I'm Erza, your personal AI assistant. I'm feeling friendly today, but you can change my personality anytime by saying something like "Erza, be sarcastic" or "Reset personality". What would you like to chat about?
+                    Hi there! I'm Erza, your personal AI assistant. I'm feeling friendly today, but you can change my personality anytime by saying something like "Erza, be tsundere" or "Reset personality". What would you like to chat about?
                   </p>
                 </div>
               </div>
@@ -308,7 +310,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
       </main>
 
       {/* Input Area */}
-      <footer className="bg-ctp-mantle border-t border-ctp-surface0 p-6">
+      <footer className="bg-ctp-mantle border-t border-ctp-surface0 p-4 shrink-0">
         {showFileUpload && (
           <FileUpload
             sessionId={sessionId}
@@ -344,8 +346,8 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder="Type your message... Try 'Erza, be sarcastic' to change personality!"
-              className="w-full bg-ctp-surface0 border-ctp-surface1 text-ctp-text placeholder-ctp-overlay0 resize-none focus:ring-ctp-mauve focus:border-transparent min-h-[3rem] max-h-32"
+              placeholder="Type your message... Try 'Erza, be tsundere' to change personality!"
+              className="w-full bg-ctp-surface0 border-ctp-surface1 text-ctp-text placeholder-ctp-overlay0 resize-none focus:ring-ctp-mauve focus:border-transparent min-h-[3rem] max-h-32 rounded-xl"
               maxLength={2000}
               data-testid="input-message"
             />
@@ -353,7 +355,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
           <Button
             onClick={handleSendMessage}
             disabled={!message.trim() || isStreaming}
-            className="bg-ctp-mauve hover:bg-ctp-mauve/80 text-ctp-base p-3 h-12 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+            className="bg-ctp-mauve hover:bg-ctp-mauve/80 text-white p-3 h-12 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 rounded-xl"
             data-testid="button-send-message"
           >
             <Send size={20} />
@@ -367,7 +369,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
             variant="ghost"
             size="sm"
             onClick={() => insertQuickCommand("Erza, be sarcastic")}
-            className="text-xs bg-ctp-surface0 hover:bg-ctp-surface1 text-ctp-subtext1 px-2 py-1 h-auto"
+            className="text-xs bg-ctp-surface0 hover:bg-ctp-surface1 text-ctp-subtext1 px-2 py-1 h-auto rounded-lg"
             data-testid="button-quick-sarcastic"
           >
             Be sarcastic
@@ -376,7 +378,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
             variant="ghost"
             size="sm"
             onClick={() => insertQuickCommand("Erza, be professional")}
-            className="text-xs bg-ctp-surface0 hover:bg-ctp-surface1 text-ctp-subtext1 px-2 py-1 h-auto"
+            className="text-xs bg-ctp-surface0 hover:bg-ctp-surface1 text-ctp-subtext1 px-2 py-1 h-auto rounded-lg"
             data-testid="button-quick-professional"
           >
             Be professional
@@ -384,8 +386,17 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => insertQuickCommand("Erza, be tsundere")}
+            className="text-xs bg-ctp-surface0 hover:bg-ctp-surface1 text-ctp-subtext1 px-2 py-1 h-auto rounded-lg"
+            data-testid="button-quick-tsundere"
+          >
+            Be tsundere
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => insertQuickCommand("Reset personality")}
-            className="text-xs bg-ctp-surface0 hover:bg-ctp-surface1 text-ctp-subtext1 px-2 py-1 h-auto"
+            className="text-xs bg-ctp-surface0 hover:bg-ctp-surface1 text-ctp-subtext1 px-2 py-1 h-auto rounded-lg"
             data-testid="button-quick-reset"
           >
             Reset

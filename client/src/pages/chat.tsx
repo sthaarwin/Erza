@@ -15,7 +15,7 @@ export default function Chat() {
   }, []);
 
   return (
-    <div className="h-screen bg-ctp-base text-ctp-text">
+    <div className="fixed inset-0 bg-ctp-base text-ctp-text overflow-hidden">
       <ChatInterface sessionId={sessionId} />
     </div>
   );

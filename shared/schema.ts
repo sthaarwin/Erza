@@ -53,7 +53,7 @@ export const chatRequestSchema = z.object({
 });
 
 export const personalityChangeSchema = z.object({
-  personality: z.enum(["friendly", "sarcastic", "professional", "funny"]),
+  personality: z.enum(["friendly", "sarcastic", "professional", "funny", "tsundere"]),
   sessionId: z.string(),
 });
 

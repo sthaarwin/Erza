@@ -11,6 +11,18 @@ except ImportError:
     GPT4ALL_AVAILABLE = False
     print("GPT4All not available. Please install it with: pip install gpt4all")
 
+# Import tsundere dataset
+try:
+    from .tsundere_dataset import get_tsundere_response, TSUNDERE_TRAINING_EXAMPLES
+    TSUNDERE_DATASET_AVAILABLE = True
+except ImportError:
+    try:
+        from tsundere_dataset import get_tsundere_response, TSUNDERE_TRAINING_EXAMPLES
+        TSUNDERE_DATASET_AVAILABLE = True
+    except ImportError:
+        TSUNDERE_DATASET_AVAILABLE = False
+        print("Tsundere dataset not available")
+
 class LocalGPT4All:
     def __init__(self, model_name: str = "orca-mini-3b-gguf2-q4_0.gguf", suppress_output: bool = False):
         if not GPT4ALL_AVAILABLE:
@@ -82,11 +94,39 @@ class LocalGPT4All:
         if not self.model:
             raise Exception("Model not initialized")
         
+        # Check if this is tsundere mode and use dataset responses
+        if self._is_tsundere_mode(messages) and TSUNDERE_DATASET_AVAILABLE:
+            user_message = self._get_last_user_message(messages)
+            if user_message:
+                response = get_tsundere_response(user_message)
+                print(f"🎭 Using tsundere dataset response for: '{user_message}'")
+                print(f"🤖 Tsundere response: {response}")
+                
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "role": "assistant",
+                                "content": response
+                            },
+                            "finish_reason": "stop"
+                        }
+                    ],
+                    "model": self.model_name + "-tsundere",
+                    "usage": {
+                        "prompt_tokens": len(user_message.split()),
+                        "completion_tokens": len(response.split()),
+                        "total_tokens": len(user_message.split()) + len(response.split())
+                    }
+                }
+        
         # Convert messages to a single prompt
         prompt = self._messages_to_prompt(messages)
+        print(f"🔍 Full prompt being sent to model:\n{prompt}")
         
-        # Generate response
+        # Generate response using the model
         response = self.model.generate(prompt, max_tokens=kwargs.get('max_tokens', 150))
+        print(f"🤖 Raw model response: {response}")
         
         # Return in OpenAI format
         return {
@@ -114,11 +154,40 @@ class LocalGPT4All:
         if not self.model:
             raise Exception("Model not initialized")
         
+        # Check if this is tsundere mode and use dataset responses
+        if self._is_tsundere_mode(messages) and TSUNDERE_DATASET_AVAILABLE:
+            user_message = self._get_last_user_message(messages)
+            if user_message:
+                response = get_tsundere_response(user_message)
+                print(f"🎭 [STREAM] Using tsundere dataset response for: '{user_message}'")
+                print(f"🤖 [STREAM] Tsundere response: {response}")
+                
+                # Simulate streaming the tsundere response
+                words = response.split()
+                for i, word in enumerate(words):
+                    chunk = {
+                        "choices": [
+                            {
+                                "delta": {
+                                    "role": "assistant" if i == 0 else None,
+                                    "content": word + (" " if i < len(words) - 1 else "")
+                                },
+                                "finish_reason": None if i < len(words) - 1 else "stop"
+                            }
+                        ],
+                        "model": self.model_name + "-tsundere"
+                    }
+                    yield chunk
+                    await asyncio.sleep(0.05)  # 50ms delay between words
+                return
+        
         # Convert messages to a single prompt
         prompt = self._messages_to_prompt(messages)
+        print(f"🔍 [STREAM] Full prompt being sent to model:\n{prompt}")
         
         # Generate response (GPT4All doesn't support native streaming, so we'll simulate it)
         response = self.model.generate(prompt, max_tokens=kwargs.get('max_tokens', 150))
+        print(f"🤖 [STREAM] Raw model response: {response}")
         
         # Simulate streaming by yielding chunks
         words = response.split()
@@ -147,6 +216,22 @@ class LocalGPT4All:
             
             # Add a small delay to simulate streaming
             await asyncio.sleep(0.05)  # 50ms delay between words
+    
+    def _is_tsundere_mode(self, messages):
+        """Check if the conversation is in tsundere mode"""
+        for message in messages:
+            if message.get("role") == "system":
+                content = message.get("content", "").lower()
+                if "tsundere" in content:
+                    return True
+        return False
+    
+    def _get_last_user_message(self, messages):
+        """Get the last user message from the conversation"""
+        for message in reversed(messages):
+            if message.get("role") == "user":
+                return message.get("content", "")
+        return None
     
     def _messages_to_prompt(self, messages):
         """Convert OpenAI message format to a single prompt"""

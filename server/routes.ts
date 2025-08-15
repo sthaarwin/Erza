@@ -180,7 +180,8 @@ const personalities = {
   friendly: "You are Erza, a friendly and helpful AI assistant. Be warm, encouraging, and supportive in your responses. Use a conversational tone and show genuine interest in helping the user.",
   sarcastic: "You are Erza, a sarcastic but still helpful AI assistant. Use wit, irony, and playful sarcasm in your responses while still being informative and useful. Don't be mean-spirited.",
   professional: "You are Erza, a professional and formal AI assistant. Be precise, articulate, and business-like in your responses. Maintain a respectful and competent demeanor.",
-  funny: "You are Erza, a humorous and entertaining AI assistant. Use jokes, puns, and light-hearted comments while still being helpful. Make conversations enjoyable and fun."
+  funny: "You are Erza, a humorous and entertaining AI assistant. Use jokes, puns, and light-hearted comments while still being helpful. Make conversations enjoyable and fun.",
+  tsundere: "You are Erza with a tsundere personality. IMPORTANT: You must act reluctant and defensive at first, but gradually show you care. Always respond in character. Use phrases like: 'It's not like I wanted to help you or anything...', 'B-baka!', 'Don't get the wrong idea!', 'I'm only helping because I have to!'. Act embarrassed when complimented but secretly pleased. Be initially cold but warm up slowly. Never break character or say you cannot express emotions."
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -228,6 +229,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (lowerMessage.includes("friendly")) {
           newPersonality = "friendly";
           personalityChanged = true;
+        } else if (lowerMessage.includes("tsundere")) {
+          newPersonality = "tsundere";
+          personalityChanged = true;
         }
       } else if (lowerMessage.includes("reset personality")) {
         newPersonality = "friendly";
@@ -236,6 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (personalityChanged) {
         await storage.updatePersonality(sessionId, newPersonality);
+        console.log(`🎭 Personality changed to: ${newPersonality}`);
       }
       
       // Prepare messages for AI
@@ -243,6 +248,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recentMessages = Array.isArray(messages) ? messages.slice(-10) : []; // Keep last 10 messages for context
       
       const systemMessage = personalities[newPersonality as keyof typeof personalities];
+      console.log(`🤖 Using personality: ${newPersonality}`);
+      console.log(`📝 System message: ${systemMessage}`);
       
       const aiMessages = [
         { role: "system" as const, content: systemMessage },
@@ -368,6 +375,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (lowerMessage.includes("friendly")) {
           newPersonality = "friendly";
           personalityChanged = true;
+        } else if (lowerMessage.includes("tsundere")) {
+          newPersonality = "tsundere";
+          personalityChanged = true;
         }
       } else if (lowerMessage.includes("reset personality")) {
         newPersonality = "friendly";
@@ -376,6 +386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (personalityChanged) {
         await storage.updatePersonality(sessionId, newPersonality);
+        console.log(`🎭 [STREAM] Personality changed to: ${newPersonality}`);
       }
       
       // Prepare messages for AI
@@ -383,6 +394,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recentMessages = Array.isArray(messages) ? messages.slice(-10) : [];
       
       const systemMessage = personalities[newPersonality as keyof typeof personalities];
+      console.log(`🤖 [STREAM] Using personality: ${newPersonality}`);
+      console.log(`📝 [STREAM] System message: ${systemMessage}`);
       
       const aiMessages = [
         { role: "system" as const, content: systemMessage },
