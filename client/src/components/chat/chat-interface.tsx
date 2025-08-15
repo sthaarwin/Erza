@@ -7,6 +7,7 @@ import FileUpload from "./file-upload";
 import PersonalityDropdown from "./personality-dropdown";
 import TypingIndicator from "./typing-indicator";
 import { useToast } from "@/hooks/use-toast";
+import { useStreamingChat } from "@/hooks/use-streaming-chat";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2, Paperclip, Palette, Send, Bot } from "lucide-react";
@@ -25,10 +26,12 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [showPersonalityMenu, setShowPersonalityMenu] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [streamingResponse, setStreamingResponse] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isStreaming, streamingMessage, sendStreamingMessage } = useStreamingChat();
 
   // Load conversation
   const { data: conversation, isLoading } = useQuery<ConversationData>({
@@ -117,7 +120,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, isTyping, isStreaming, streamingResponse]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -127,9 +130,52 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
     }
   }, [message]);
 
-  const handleSendMessage = () => {
-    if (!message.trim() || sendMessageMutation.isPending) return;
-    sendMessageMutation.mutate(message);
+  const handleSendMessage = async () => {
+    if (!message.trim() || isStreaming) return;
+    
+    const messageToSend = message;
+    setMessage("");
+    setStreamingResponse("");
+    
+    try {
+      await sendStreamingMessage(
+        messageToSend,
+        sessionId,
+        // onChunk
+        (chunk) => {
+          setStreamingResponse(chunk.accumulated);
+        },
+        // onComplete
+        (finalMessage) => {
+          setStreamingResponse("");
+          // Refresh conversation to show the final saved message
+          queryClient.invalidateQueries({ queryKey: ["/api/conversation", sessionId] });
+          
+          if (finalMessage.personalityChanged) {
+            toast({
+              title: "Personality Updated",
+              description: `Switched to ${finalMessage.personality} mode`,
+            });
+          }
+        },
+        // onError
+        (error) => {
+          setStreamingResponse("");
+          toast({
+            title: "Error",
+            description: error,
+            variant: "destructive",
+          });
+        }
+      );
+    } catch (error) {
+      setStreamingResponse("");
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -232,7 +278,28 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
             <MessageBubble key={msg.id} message={msg} />
           ))}
           
-          {isTyping && <TypingIndicator />}
+          {/* Show streaming response */}
+          {isStreaming && streamingResponse && (
+            <div className="message-bubble flex items-start space-x-3 animate-fade-in">
+              <div className="w-8 h-8 bg-gradient-to-br from-ctp-mauve to-ctp-blue rounded-full flex items-center justify-center mt-1 flex-shrink-0">
+                <Bot size={12} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-baseline space-x-2 mb-1">
+                  <span className="font-medium text-ctp-text">Erza:</span>
+                  <span className="text-xs text-ctp-overlay0">Now</span>
+                </div>
+                <div className="bg-ctp-surface0 rounded-2xl rounded-tl-md px-4 py-3 max-w-lg">
+                  <p className="text-ctp-text whitespace-pre-wrap">
+                    {streamingResponse}
+                    <span className="inline-block w-2 h-4 bg-ctp-text ml-1 animate-pulse">|</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {(isTyping || isStreaming) && !streamingResponse && <TypingIndicator />}
           <div ref={messagesEndRef} />
         </div>
       </main>
@@ -282,7 +349,7 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
           </div>
           <Button
             onClick={handleSendMessage}
-            disabled={!message.trim() || sendMessageMutation.isPending}
+            disabled={!message.trim() || isStreaming}
             className="bg-ctp-mauve hover:bg-ctp-mauve/80 text-ctp-base p-3 h-12 transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
             data-testid="button-send-message"
           >
