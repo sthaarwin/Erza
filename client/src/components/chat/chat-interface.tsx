@@ -147,9 +147,12 @@ export default function ChatInterface({ sessionId }: ChatInterfaceProps) {
         },
         // onComplete
         (finalMessage) => {
-          setStreamingResponse("");
-          // Refresh conversation to show the final saved message
-          queryClient.invalidateQueries({ queryKey: ["/api/conversation", sessionId] });
+          // Keep the streaming response visible for a moment before clearing
+          setTimeout(() => {
+            setStreamingResponse("");
+            // Refresh conversation to show the final saved message
+            queryClient.invalidateQueries({ queryKey: ["/api/conversation", sessionId] });
+          }, 500); // Wait 500ms before clearing
           
           if (finalMessage.personalityChanged) {
             toast({

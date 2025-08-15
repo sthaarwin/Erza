@@ -95,11 +95,11 @@ asyncio.run(main())
 }
 
 // Streaming Local AI function
-async function* callLocalAIStream(messages: any[], options: any = {}) {
-  const pythonScript = path.join(__dirname, 'local_gpt.py');
+async function callLocalAIStreamChunks(messages: any[], options: any = {}): Promise<any[]> {
   const pythonPath = '/home/arwin/codes/projects/ErzaMind/.venv/bin/python';
   
-  const python = spawn(pythonPath, ['-c', `
+  return new Promise((resolve, reject) => {
+    const python = spawn(pythonPath, ['-c', `
 import sys
 sys.path.append('${__dirname}')
 from local_gpt import get_local_gpt
@@ -119,40 +119,55 @@ async def main():
 asyncio.run(main())
 `]);
 
-  let buffer = '';
+    const chunks: any[] = [];
+    let buffer = '';
 
-  for await (const data of python.stdout) {
-    buffer += data.toString();
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+    python.stdout.on('data', (data) => {
+      buffer += data.toString();
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
-    for (const line of lines) {
-      if (line.trim()) {
-        try {
-          const chunk = JSON.parse(line.trim());
-          if (chunk.error) {
-            throw new Error(chunk.error);
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const chunk = JSON.parse(line.trim());
+            if (chunk.error) {
+              reject(new Error(chunk.error));
+              return;
+            }
+            chunks.push(chunk);
+          } catch (parseError) {
+            // Skip non-JSON lines (like model loading messages)
+            continue;
           }
-          yield chunk;
-        } catch (parseError) {
-          // Skip non-JSON lines
-          continue;
         }
       }
-    }
-  }
+    });
 
-  // Process any remaining buffer
-  if (buffer.trim()) {
-    try {
-      const chunk = JSON.parse(buffer.trim());
-      if (!chunk.error) {
-        yield chunk;
+    python.stderr.on('data', (data) => {
+      // Log errors but don't reject immediately as they might be warnings
+      console.warn('Python stderr:', data.toString());
+    });
+
+    python.on('close', (code) => {
+      if (code === 0) {
+        // Process any remaining buffer
+        if (buffer.trim()) {
+          try {
+            const chunk = JSON.parse(buffer.trim());
+            if (!chunk.error) {
+              chunks.push(chunk);
+            }
+          } catch (parseError) {
+            // Ignore final parsing errors
+          }
+        }
+        resolve(chunks);
+      } else {
+        reject(new Error(`Python script failed with code ${code}`));
       }
-    } catch (parseError) {
-      // Ignore final parsing errors
-    }
-  }
+    });
+  });
 }
 
 // Configure multer for file uploads
@@ -384,11 +399,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log("Attempting to use local AI streaming...");
         
-        // Stream from local AI
-        for await (const chunk of callLocalAIStream(aiMessages, {
+        // Get all chunks from local AI
+        const chunks = await callLocalAIStreamChunks(aiMessages, {
           max_tokens: 150,
           temperature: 0.7,
-        })) {
+        });
+        
+        // Stream chunks to client with delays for real-time effect
+        for (const chunk of chunks) {
           const content = chunk.choices[0]?.delta?.content || "";
           if (content) {
             accumulatedResponse += content;
@@ -400,6 +418,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               accumulated: accumulatedResponse,
               finished: chunk.choices[0]?.finish_reason === "stop"
             })}\n\n`);
+            
+            // Add delay to simulate real-time streaming
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
           
           if (chunk.choices[0]?.finish_reason === "stop") {

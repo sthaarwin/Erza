@@ -62,6 +62,8 @@ export function useStreamingChat() {
           if (line.startsWith("data: ")) {
             const data = line.slice(6);
             
+            console.log("Received data:", data); // Debug log
+            
             if (data === "[DONE]") {
               setIsStreaming(false);
               return;
@@ -69,6 +71,8 @@ export function useStreamingChat() {
 
             try {
               const chunk: StreamingMessage = JSON.parse(data);
+              
+              console.log("Parsed chunk:", chunk); // Debug log
               
               if (chunk.error) {
                 onError?.(chunk.error);
@@ -85,7 +89,7 @@ export function useStreamingChat() {
                 return;
               }
             } catch (parseError) {
-              console.warn("Failed to parse streaming chunk:", parseError);
+              console.warn("Failed to parse streaming chunk:", parseError, "Data:", data);
             }
           }
         }
